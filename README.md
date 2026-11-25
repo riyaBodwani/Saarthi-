@@ -1,4 +1,4 @@
-# Saarthi 2.0
+# Saarthi
 
 Saarthi helps college students understand administrative notices without decoding dense circulars on their own.
 
