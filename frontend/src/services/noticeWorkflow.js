@@ -85,6 +85,7 @@ export async function extractNoticeText({
     filename: typeof data.filename === "string" ? data.filename : file.name,
     extractionMethod: data.extraction_method ?? "text",
     ocrPages: Array.isArray(data.ocr_pages) ? data.ocr_pages : [],
+    pages: Array.isArray(data.pages) ? data.pages : [],
   };
 }
 
@@ -128,6 +129,7 @@ export async function runNoticeAnalysis({
     url: analyzeUrl,
     extractedText: extraction.text,
     language,
+    pages: extraction.pages,
     signal,
     onRetry,
   });

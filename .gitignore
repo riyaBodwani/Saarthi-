@@ -29,6 +29,12 @@ backend/.env
 backend/.env.*
 !backend/.env.example
 
+# Local databases and uploads
+backend/saarthi.db
+backend/**/*.db
+backend/storage/
+*.db
+
 # Credentials and private keys
 .netrc
 .pypirc

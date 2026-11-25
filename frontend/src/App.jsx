@@ -1,7 +1,12 @@
-import Home from './pages/Home'
+import { AppProvider } from "./context/AppContext";
+import { AppShell } from "./components/layout/AppShell";
 
 function App() {
-  return <Home />
+  return (
+    <AppProvider>
+      <AppShell />
+    </AppProvider>
+  );
 }
 
-export default App
+export default App;

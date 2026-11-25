@@ -9,6 +9,7 @@ import logging
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -113,10 +114,19 @@ def _analyze_date(main, date_text, date_type="deadline", source_text=None, now=N
 
 def run_tests():
     from fastapi.testclient import TestClient
-    # Import from backend package
-    sys.path.insert(0, ".")
-    from backend import main
-    from backend.main import app
+
+    # Support both `python test_main.py` (cwd=backend) and package-style imports.
+    backend_dir = Path(__file__).resolve().parent
+    repo_root = backend_dir.parent
+    for candidate in (str(backend_dir), str(repo_root)):
+        if candidate not in sys.path:
+            sys.path.insert(0, candidate)
+    try:
+        import main
+        from main import app
+    except ModuleNotFoundError:
+        from backend import main
+        from backend.main import app
 
     client = TestClient(app)
     failures = []
@@ -195,7 +205,7 @@ def run_tests():
         print("PASS  PDF OCR rendering — actual raster pixel and dimension limits")
 
     # ── Test: Searchable PDFs use local extraction without Gemini ─────────
-    with patch("backend.main.genai.Client", side_effect=AssertionError("unexpected Gemini OCR call")):
+    with patch(f"{main.__name__}.genai.Client", side_effect=AssertionError("unexpected Gemini OCR call")):
         r = client.post(
             "/extract",
             files={"file": ("searchable.pdf", pdf_bytes, "application/pdf")},
@@ -214,7 +224,7 @@ def run_tests():
             {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
         ),
         patch(
-            "backend.main.genai.Client",
+            f"{main.__name__}.genai.Client",
             _mock_vision_client(main, ["Scanned notice text"], vision_calls),
         ),
     ):
@@ -244,7 +254,7 @@ def run_tests():
             {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
         ),
         patch(
-            "backend.main.genai.Client",
+            f"{main.__name__}.genai.Client",
             _mock_vision_client(main, ["Scanned page transcription"], vision_calls),
         ),
     ):
@@ -278,7 +288,7 @@ def run_tests():
                 {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
             ),
             patch(
-                "backend.main.genai.Client",
+                f"{main.__name__}.genai.Client",
                 _mock_vision_client(main, [transcription], vision_calls),
             ),
         ):
@@ -310,7 +320,7 @@ def run_tests():
             {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
         ),
         patch(
-            "backend.main.genai.Client",
+            f"{main.__name__}.genai.Client",
             _mock_vision_client(main, ["MIME sniffed from image bytes"], content_calls),
         ),
     ):
@@ -363,7 +373,7 @@ def run_tests():
             {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
         ),
         patch(
-            "backend.main.genai.Client",
+            f"{main.__name__}.genai.Client",
             _mock_vision_client(main, [""], empty_calls),
         ),
     ):
@@ -420,7 +430,7 @@ def run_tests():
     else:
         failures.append(f"FAIL  oversized image → {r.status_code} {r.text}")
 
-    with patch("backend.main.genai.Client", side_effect=AssertionError("pixel limit checked after Gemini")):
+    with patch(f"{main.__name__}.genai.Client", side_effect=AssertionError("pixel limit checked after Gemini")):
         r = client.post(
             "/extract",
             files={"file": ("large-dimensions.png", _make_image("PNG", (4500, 4500)), "image/png")},
@@ -431,7 +441,7 @@ def run_tests():
         failures.append(f"FAIL  image pixel limit → {r.status_code} {r.text}")
 
     too_many_ocr_pages = _make_pdf(text=None, scanned_pages=main.MAX_OCR_PAGES + 1)
-    with patch("backend.main.genai.Client", side_effect=AssertionError("page limit checked after Gemini")):
+    with patch(f"{main.__name__}.genai.Client", side_effect=AssertionError("page limit checked after Gemini")):
         r = client.post(
             "/extract",
             files={"file": ("too-many-scans.pdf", too_many_ocr_pages, "application/pdf")},
@@ -452,7 +462,7 @@ def run_tests():
         (504, "DEADLINE_EXCEEDED", 504),
     ]
     log_stream = io.StringIO()
-    test_logger = logging.getLogger("backend.main")
+    test_logger = logging.getLogger(main.__name__)
     log_handler = logging.StreamHandler(log_stream)
     test_logger.addHandler(log_handler)
     try:
@@ -468,7 +478,7 @@ def run_tests():
                     {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
                 ),
                 patch(
-                    "backend.main.genai.Client",
+                    f"{main.__name__}.genai.Client",
                     _mock_vision_client(main, [provider_error], calls),
                 ),
             ):
@@ -492,7 +502,7 @@ def run_tests():
                 {"GEMINI_API_KEY": "test-not-a-secret", "GEMINI_MODEL": "gemini-test-vision"},
             ),
             patch(
-                "backend.main.genai.Client",
+                f"{main.__name__}.genai.Client",
                 _mock_vision_client(
                     main,
                     [TimeoutError("private notice contents and secret")],
@@ -822,7 +832,7 @@ def run_tests():
             os.environ,
             {"GEMINI_API_KEY": "fake-local-test-key", "GEMINI_MODEL": "gemini-test"},
         ),
-        patch("backend.main.genai.Client", MockGeminiClient),
+        patch(f"{main.__name__}.genai.Client", MockGeminiClient),
     ):
         analysis = main.analyze_notice_with_gemini(source_text, "english")
 
@@ -831,7 +841,7 @@ def run_tests():
     else:
         failures.append(f"FAIL  Gemini response parsing → {analysis}")
 
-    with patch("backend.main.analyze_notice_with_gemini", return_value=analysis):
+    with patch(f"{main.__name__}.analyze_notice_with_gemini", return_value=analysis):
         r = client.post(
             "/analyze",
             json={"extracted_text": source_text, "language": "english"},
@@ -934,7 +944,7 @@ def run_tests():
                 os.environ,
                 {"GEMINI_API_KEY": "fake-local-test-key", "GEMINI_MODEL": "gemini-test"},
             ),
-            patch("backend.main.genai.Client", LocalizedGeminiClient),
+            patch(f"{main.__name__}.genai.Client", LocalizedGeminiClient),
         ):
             localized_analysis = main.analyze_notice_with_gemini(
                 multilingual_source,
@@ -959,7 +969,7 @@ def run_tests():
             and event_item["urgency"] is None
         )
         with patch(
-            "backend.main.analyze_notice_with_gemini",
+            f"{main.__name__}.analyze_notice_with_gemini",
             return_value=localized_analysis,
         ):
             language_response = client.post(
@@ -1025,7 +1035,7 @@ def run_tests():
 
         with (
             patch.dict(os.environ, {"GEMINI_API_KEY": "fake-local-test-key"}),
-            patch("backend.main.genai.Client", FailingGeminiClient),
+            patch(f"{main.__name__}.genai.Client", FailingGeminiClient),
         ):
             try:
                 main.analyze_notice_with_gemini(source_text, "english")
@@ -1083,7 +1093,7 @@ def run_tests():
 
     with (
         patch.dict(os.environ, {"GEMINI_API_KEY": "fake-local-test-key"}),
-        patch("backend.main.genai.Client", RetryHeaderClient),
+        patch(f"{main.__name__}.genai.Client", RetryHeaderClient),
     ):
         response = client.post(
             "/analyze",
@@ -1136,3 +1146,4 @@ def run_tests():
 
 if __name__ == "__main__":
     run_tests()
+

@@ -153,6 +153,7 @@ export async function requestNoticeAnalysis({
   url,
   extractedText,
   language,
+  pages = null,
   signal,
   fetchImpl = fetch,
   onRetry = () => {},
@@ -184,7 +185,11 @@ export async function requestNoticeAnalysis({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ extracted_text: extractedText, language }),
+          body: JSON.stringify({
+            extracted_text: extractedText,
+            language,
+            ...(Array.isArray(pages) && pages.length > 0 ? { pages } : {}),
+          }),
         },
         signal,
         Math.min(attemptTimeoutMs, remaining)

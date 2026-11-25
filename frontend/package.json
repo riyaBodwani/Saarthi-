@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "test": "node --test src/services/deadlineUtils.test.js src/services/analysisRequest.test.js src/services/originalTextState.test.js src/services/noticeWorkflow.test.js",
+    "test": "node --test src/services/deadlineUtils.test.js src/services/analysisRequest.test.js src/services/originalTextState.test.js src/services/noticeWorkflow.test.js src/services/noticeHistory.test.js src/services/analysisExport.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
