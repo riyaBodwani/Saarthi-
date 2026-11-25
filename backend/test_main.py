@@ -1134,6 +1134,143 @@ def run_tests():
     else:
         failures.append("FAIL  Transport errors were not safely distinguished")
 
+    # ── Language consistency: conservative detection and repair ──────────
+    assert not main._has_obvious_english_prose(
+        "Riverview College मध्ये २० नोव्हेंबर २०२६ पर्यंत अर्ज करा.", "marathi"
+    )
+    assert not main._has_obvious_english_prose(
+        "अधिक माहिती: placement@example.org येथे संपर्क करा.", "marathi"
+    )
+    assert main._has_obvious_english_prose(
+        "विद्यार्थ्यांनी अर्ज करावा. Students must complete the registration before Friday.", "marathi"
+    )
+    assert main._has_obvious_english_prose(
+        "छात्रों को Students must complete the registration before Friday.", "hindi"
+    )
+    assert not main._has_obvious_english_prose(
+        "Students must complete the registration before Friday.", "english"
+    )
+    assert "document_type and evidence.claim" in main._analysis_system_instruction("marathi")
+    assert "Do NOT write English sentences" in main._analysis_system_instruction("hindi")
+    print("PASS  Language detection — mixed prose flagged, English names/contact details allowed")
+
+    bad_payload = {
+        "summary": "Students must complete the registration before 28 Nov 2026.",
+        "key_points": [
+            "Students must complete the registration before 28 Nov 2026.",
+            "नोंदणी आवश्यक आहे.",
+            "सूचना वाचा.",
+        ],
+        "important_dates": [{
+            "label": "नोंदणीची अंतिम तारीख",
+            "date": "28 Nov 2026",
+            "context": "नोंदणी करणे आवश्यक आहे.",
+            "type": "deadline",
+        }],
+        "action_items": ["नोंदणी करा."],
+        "evidence": [{
+            "claim": "नोंदणीसाठी अंतिम तारीख दिली आहे.",
+            "evidence_snippet": "28 Nov 2026",
+            "category": "date",
+        }],
+    }
+    good_payload = json.loads(json.dumps(bad_payload, ensure_ascii=False))
+    good_payload["summary"] = "विद्यार्थ्यांनी 28 Nov 2026 पर्यंत नोंदणी पूर्ण करावी."
+    good_payload["key_points"][0] = "विद्यार्थ्यांनी 28 Nov 2026 पर्यंत नोंदणी पूर्ण करावी."
+    rejected_payload = json.loads(json.dumps(good_payload, ensure_ascii=False))
+    rejected_payload["important_dates"][0]["date"] = "29 Nov 2026"
+    original_model = main.NoticeAnalysis.model_validate(bad_payload)
+    fixed_model = main.NoticeAnalysis.model_validate(good_payload)
+    rejected_model = main.NoticeAnalysis.model_validate(rejected_payload)
+    combined = main._combine_language_repair(original_model, fixed_model, "marathi")
+    assert combined is not None
+    assert combined.summary == good_payload["summary"]
+    assert combined.important_dates[0].date == "28 Nov 2026"
+    assert combined.evidence[0].evidence_snippet == "28 Nov 2026"
+    assert main._combine_language_repair(original_model, rejected_model, "marathi") is None
+    assert main._repair_anchors_preserved(
+        bad_payload["summary"], good_payload["summary"]
+    )
+    assert not main._repair_anchors_preserved(
+        bad_payload["summary"], "विद्यार्थ्यांनी 29 Nov 2026 पर्यंत नोंदणी करावी."
+    )
+    print("PASS  Language repair — only narrative fields changed; dates and evidence preserved")
+
+    repair_calls = []
+    class LanguageRepairModels:
+        def generate_content(self, *, model, contents, config):
+            repair_calls.append((model, contents, config))
+            return SimpleNamespace(text=json.dumps(good_payload, ensure_ascii=False))
+
+    class LanguageRepairClient:
+        def __init__(self, **kwargs):
+            self.models = LanguageRepairModels()
+        def close(self):
+            pass
+
+    class LanguagePipelineModels:
+        def generate_content(self, *, model, contents, config):
+            repair_calls.append((model, contents, config))
+            if len(repair_calls) == 1:
+                return SimpleNamespace(text=json.dumps(bad_payload, ensure_ascii=False))
+            return SimpleNamespace(text=json.dumps(good_payload, ensure_ascii=False))
+
+    class LanguagePipelineClient:
+        def __init__(self, **kwargs):
+            self.models = LanguagePipelineModels()
+        def close(self):
+            pass
+
+    with (
+        patch.dict(os.environ, {"GEMINI_API_KEY": "fake-local-test-key", "GEMINI_MODEL": "gemini-test"}),
+        patch(f"{main.__name__}.genai.Client", LanguagePipelineClient),
+    ):
+        repaired_result = main.analyze_notice_with_gemini(
+            "Submit registration by 28 Nov 2026.", "marathi"
+        )
+    assert repaired_result["summary"] == good_payload["summary"]
+    assert repaired_result["important_dates"][0]["date"] == "28 Nov 2026"
+    assert len(repair_calls) == 2  # initial + one repair, no more
+    assert "LANGUAGE-ONLY repair" in repair_calls[1][2].system_instruction
+    print("PASS  Marathi analysis — one bounded repair call, unchanged date and source")
+
+    repair_calls.clear()
+    with (
+        patch.dict(os.environ, {"GEMINI_API_KEY": "fake-local-test-key", "GEMINI_MODEL": "gemini-test"}),
+        patch(f"{main.__name__}.genai.Client", LanguagePipelineClient),
+    ):
+        english_result = main.analyze_notice_with_gemini(
+            "Submit registration by 28 Nov 2026.", "english"
+        )
+    assert english_result["summary"] == bad_payload["summary"]
+    assert len(repair_calls) == 1  # English never repaired
+    print("PASS  English analysis — no additional Gemini call")
+
+    class LanguageRepairFailureModels:
+        def generate_content(self, *, model, contents, config):
+            repair_calls.append((model, contents, config))
+            if len(repair_calls) % 2:
+                return SimpleNamespace(text=json.dumps(bad_payload, ensure_ascii=False))
+            raise TimeoutError("simulated repair timeout")
+
+    class LanguageRepairFailureClient:
+        def __init__(self, **kwargs):
+            self.models = LanguageRepairFailureModels()
+        def close(self):
+            pass
+
+    repair_calls.clear()
+    with (
+        patch.dict(os.environ, {"GEMINI_API_KEY": "fake-local-test-key", "GEMINI_MODEL": "gemini-test"}),
+        patch(f"{main.__name__}.genai.Client", LanguageRepairFailureClient),
+    ):
+        fallback = main.analyze_notice_with_gemini(
+            "Submit registration by 28 Nov 2026.", "hindi"
+        )
+    assert fallback["summary"] == bad_payload["summary"]
+    assert len(repair_calls) == 2
+    print("PASS  Failed repair — usable original preserved without unbounded retries")
+
     # ── Summary ───────────────────────────────────────────────────────────
     if failures:
         print("\n--- FAILURES ---")
