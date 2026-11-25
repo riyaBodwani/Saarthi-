@@ -46,22 +46,104 @@ const languages = [
   { id: "marathi", label: "Marathi", nativeLabel: "मराठी" },
 ];
 
-const PROCESSING_STEPS = [
-  { id: "uploading", label: "Uploading document" },
-  { id: "extracting", label: "Extracting text" },
-  { id: "detecting", label: "Detecting language" },
-  { id: "understanding", label: "Understanding notice" },
-  { id: "dates", label: "Extracting important dates" },
-  { id: "preparing", label: "Preparing results" },
-];
-
-const urgencyLabels = {
-  overdue: "Overdue",
-  due_today: "Due Today",
-  urgent: "Urgent",
-  upcoming: "Upcoming",
-  later: "Later",
-  unknown: "Date Unverified",
+const UI_COPY = {
+  english: {
+    workspaceHint: "PDF circulars and notice photos · English, Hindi, or Marathi analysis",
+    analysisLanguage: "Analysis language",
+    uploadTitle: "Drop your college notice here",
+    browsePrefix: "or",
+    browse: "browse files",
+    selectFile: "Select notice file",
+    maxFileSize: "max 10 MB",
+    uploadAria: "Upload notice file. Press Enter or Space to choose a file, or drag and drop here.",
+    chooseAria: "Choose a PDF, PNG, JPG, or JPEG notice",
+    validated: "Validated", replace: "Replace", removeAria: "Remove selected notice file",
+    pdfReady: "Ready for text extraction and OCR when needed.",
+    imageReady: "Image ready for OCR extraction.",
+    analyze: "Analyze with AI", reading: "Reading your notice...",
+    analyzing: "Analyzing with AI...", retrying: (attempt) => `AI is busy — retrying automatically... (attempt ${attempt} of ${ANALYSIS_MAX_ATTEMPTS})`,
+    extractionError: "Extraction Error", analysisError: "Analysis Error", noticeError: "Notice Error",
+    dismiss: "Dismiss", dismissAnalysis: "Dismiss analysis error", page: (n) => `${n} page${n === 1 ? "" : "s"}`,
+    extracted: "Extracted", ocrPages: (pages) => `OCR pages ${pages.join(", ")}`,
+    originalAvailable: "Original notice text is available for verification.",
+    hideOriginal: "Hide original text", viewOriginal: "View original text",
+    summary: "Simple summary", keyPoints: "Key announcements", importantDates: "Important dates",
+    deadlineTracker: "Deadline tracker", deadlineIntro: "Action deadlines are separate from dates when events take place.",
+    stale: (day) => `Urgency was calculated for ${day} in Asia/Kolkata. Re-analyze to refresh it for today.`,
+    actionDeadlines: "Action deadlines", dateUnverified: "Date unverified",
+    fullDateUnverified: "Full date not verified; check the original notice.",
+    daysRemaining: (n) => `${n} calendar day${n === 1 ? "" : "s"} remaining`,
+    daysOverdue: (n) => `${n} calendar day${n === 1 ? "" : "s"} overdue`,
+    deadlineTimePassed: "Stated deadline time has passed", refresh: "Refresh to update",
+    eventDates: "Event dates · Not deadlines", actionItems: "Action items",
+    disclaimer: "AI explanations can be inaccurate. Check dates, eligibility, and requirements against the original notice.",
+    footer: "Extracted notice text can be analyzed in English, Hindi, or Marathi.",
+    type: { deadline: "Submission deadline", event: "Event", informational: "Informational date", unknown: "Unknown" },
+    urgency: { overdue: "Overdue", due_today: "Due Today", urgent: "Urgent", upcoming: "Upcoming", later: "Later", unknown: "Date Unverified" },
+    progress: ["Uploading document", "Extracting text", "Detecting language", "Understanding notice", "Extracting important dates", "Preparing results"],
+  },
+  hindi: {
+    workspaceHint: "पीडीएफ़ नोटिस और नोटिस की तस्वीरें · हिंदी, मराठी या अंग्रेज़ी में विश्लेषण",
+    analysisLanguage: "विश्लेषण की भाषा",
+    uploadTitle: "कॉलेज का नोटिस यहाँ डालें", browsePrefix: "या", browse: "फ़ाइल चुनें",
+    selectFile: "नोटिस फ़ाइल चुनें", maxFileSize: "अधिकतम 10 MB",
+    uploadAria: "नोटिस अपलोड करें। फ़ाइल चुनने के लिए एंटर या स्पेस दबाएँ या यहाँ खींचकर छोड़ें।",
+    chooseAria: "पीडीएफ़, पीएनजी, जेपीजी या जेपीईजी नोटिस चुनें",
+    validated: "जाँच पूरी", replace: "बदलें", removeAria: "चुना हुआ नोटिस हटाएँ",
+    pdfReady: "ज़रूरत पड़ने पर टेक्स्ट और ओसीआर निकालने के लिए तैयार।",
+    imageReady: "तस्वीर से टेक्स्ट निकालने के लिए तैयार।",
+    analyze: "AI से विश्लेषण करें", reading: "आपका नोटिस पढ़ा जा रहा है...",
+    analyzing: "AI से विश्लेषण किया जा रहा है...", retrying: (attempt) => `AI व्यस्त है — दोबारा प्रयास हो रहा है (${attempt}/${ANALYSIS_MAX_ATTEMPTS})`,
+    extractionError: "टेक्स्ट निकालने में त्रुटि", analysisError: "विश्लेषण में त्रुटि", noticeError: "नोटिस में त्रुटि",
+    dismiss: "बंद करें", dismissAnalysis: "विश्लेषण की त्रुटि बंद करें", page: (n) => `${n} पृष्ठ`,
+    extracted: "टेक्स्ट निकाला गया", ocrPages: (pages) => `ओसीआर पृष्ठ ${pages.join(", ")}`,
+    originalAvailable: "जाँच के लिए नोटिस का मूल पाठ उपलब्ध है।",
+    hideOriginal: "मूल पाठ छिपाएँ", viewOriginal: "मूल पाठ देखें",
+    summary: "सरल सारांश", keyPoints: "मुख्य घोषणाएँ", importantDates: "महत्त्वपूर्ण तिथियाँ",
+    deadlineTracker: "अंतिम तिथि ट्रैकर", deadlineIntro: "कार्य पूरा करने की अंतिम तिथियाँ और कार्यक्रमों की तिथियाँ अलग-अलग दिखाई गई हैं।",
+    stale: (day) => `समय-सीमा की स्थिति ${day} को Asia/Kolkata समयानुसार निकाली गई थी। आज की स्थिति के लिए फिर से विश्लेषण करें।`,
+    actionDeadlines: "कार्यों की अंतिम तिथियाँ", dateUnverified: "तिथि सत्यापित नहीं",
+    fullDateUnverified: "पूरी तिथि सत्यापित नहीं है; मूल नोटिस देखें।",
+    daysRemaining: (n) => `${n} कैलेंडर दिन शेष`, daysOverdue: (n) => `${n} कैलेंडर दिन की देरी`,
+    deadlineTimePassed: "दिया गया अंतिम समय बीत चुका है", refresh: "अपडेट के लिए पुनः विश्लेषण करें",
+    eventDates: "कार्यक्रम की तिथियाँ · अंतिम तिथियाँ नहीं", actionItems: "करने योग्य कार्य",
+    disclaimer: "AI का विश्लेषण गलत हो सकता है। तिथियाँ, पात्रता और आवश्यकताएँ मूल नोटिस से जाँचें।",
+    footer: "नोटिस के पाठ का विश्लेषण अंग्रेज़ी, हिंदी या मराठी में किया जा सकता है।",
+    type: { deadline: "जमा करने की अंतिम तिथि", event: "कार्यक्रम", informational: "सूचनात्मक तिथि", unknown: "अज्ञात" },
+    urgency: { overdue: "समय-सीमा बीत गई", due_today: "आज अंतिम दिन", urgent: "अत्यावश्यक", upcoming: "जल्द आने वाली", later: "बाद में", unknown: "तिथि सत्यापित नहीं" },
+    progress: ["दस्तावेज़ अपलोड हो रहा है", "टेक्स्ट निकाला जा रहा है", "भाषा पहचानी जा रही है", "नोटिस समझा जा रहा है", "महत्त्वपूर्ण तिथियाँ निकाली जा रही हैं", "परिणाम तैयार हो रहे हैं"],
+  },
+  marathi: {
+    workspaceHint: "पीडीएफ सूचना आणि सूचनांचे फोटो · इंग्रजी, हिंदी किंवा मराठीत विश्लेषण",
+    analysisLanguage: "विश्लेषणाची भाषा",
+    uploadTitle: "महाविद्यालयाची सूचना येथे टाका", browsePrefix: "किंवा", browse: "फाइल निवडा",
+    selectFile: "सूचनेची फाइल निवडा", maxFileSize: "कमाल 10 MB",
+    uploadAria: "सूचना अपलोड करा. फाइल निवडण्यासाठी एंटर किंवा स्पेस दाबा किंवा येथे ओढून सोडा.",
+    chooseAria: "पीडीएफ, पीएनजी, जेपीजी किंवा जेपीईजी सूचना निवडा",
+    validated: "पडताळणी पूर्ण", replace: "बदला", removeAria: "निवडलेली सूचना काढून टाका",
+    pdfReady: "गरजेनुसार मजकूर व ओसीआर काढण्यासाठी तयार.",
+    imageReady: "चित्रातून मजकूर काढण्यासाठी तयार.",
+    analyze: "AI द्वारे विश्लेषण करा", reading: "तुमची सूचना वाचली जात आहे...",
+    analyzing: "AI द्वारे विश्लेषण सुरू आहे...", retrying: (attempt) => `AI व्यस्त आहे — पुन्हा प्रयत्न सुरू आहे (${attempt}/${ANALYSIS_MAX_ATTEMPTS})`,
+    extractionError: "मजकूर काढताना त्रुटी", analysisError: "विश्लेषणात त्रुटी", noticeError: "सूचनेत त्रुटी",
+    dismiss: "बंद करा", dismissAnalysis: "विश्लेषणातील त्रुटी बंद करा", page: (n) => `${n} पृष्ठे`,
+    extracted: "मजकूर काढला", ocrPages: (pages) => `ओसीआर पृष्ठे ${pages.join(", ")}`,
+    originalAvailable: "पडताळणीसाठी सूचनेचा मूळ मजकूर उपलब्ध आहे.",
+    hideOriginal: "मूळ मजकूर लपवा", viewOriginal: "मूळ मजकूर पाहा",
+    summary: "सोप्या भाषेतील सारांश", keyPoints: "महत्त्वाच्या घोषणा", importantDates: "महत्त्वाच्या तारखा",
+    deadlineTracker: "अंतिम मुदतींचा मागोवा", deadlineIntro: "कृतींच्या अंतिम मुदती आणि कार्यक्रमांच्या तारखा स्वतंत्र दाखवल्या आहेत.",
+    stale: (day) => `अंतिम मुदतींची स्थिती ${day} रोजी Asia/Kolkata वेळेनुसार मोजली होती. आजच्या स्थितीसाठी पुन्हा विश्लेषण करा.`,
+    actionDeadlines: "कृतींच्या अंतिम मुदती", dateUnverified: "तारीख पडताळलेली नाही",
+    fullDateUnverified: "संपूर्ण तारीख पडताळलेली नाही; मूळ सूचना तपासा.",
+    daysRemaining: (n) => `${n} दिवस शिल्लक`, daysOverdue: (n) => `${n} दिवस उलटले`,
+    deadlineTimePassed: "दिलेली अंतिम वेळ उलटली आहे", refresh: "अद्ययावत करण्यासाठी पुन्हा विश्लेषण करा",
+    eventDates: "कार्यक्रमांच्या तारखा · अंतिम मुदती नाहीत", actionItems: "करावयाची कामे",
+    disclaimer: "AI च्या विश्लेषणात चुका असू शकतात. तारखा, पात्रता आणि अटी मूळ सूचनेत तपासा.",
+    footer: "सूचनेतील मजकुराचे विश्लेषण इंग्रजी, हिंदी किंवा मराठीत करता येते.",
+    type: { deadline: "सादर करण्याची अंतिम मुदत", event: "कार्यक्रम", informational: "माहितीसाठी तारीख", unknown: "अज्ञात" },
+    urgency: { overdue: "मुदत उलटली", due_today: "आज अंतिम दिवस", urgent: "तातडीचे", upcoming: "लवकरच", later: "नंतर", unknown: "तारीख पडताळलेली नाही" },
+    progress: ["दस्तावेज अपलोड होत आहे", "मजकूर काढला जात आहे", "भाषा ओळखली जात आहे", "सूचना समजून घेतली जात आहे", "महत्त्वाच्या तारखा शोधल्या जात आहेत", "परिणाम तयार होत आहेत"],
+  },
 };
 
 const urgencyStyles = {
@@ -84,15 +166,13 @@ function stageToProgressIndex(stage) {
   return -1;
 }
 
-function dateTypeLabel(type) {
-  if (type === "deadline") return "Submission deadline";
-  if (type === "event") return "Event";
-  if (type === "informational") return "Informational date";
-  if (type === "unknown") return "Unknown";
-  return type || "Unknown";
+function dateTypeLabel(type, copy) {
+  return copy.type[type] ?? copy.type.unknown;
 }
 
 function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
+  const copy = UI_COPY[language] ?? UI_COPY.english;
+  const processingSteps = copy.progress.map((label, index) => ({ id: ["uploading", "extracting", "detecting", "understanding", "dates", "preparing"][index], label }));
   const inputRef = useRef(null);
   const dropZoneRef = useRef(null);
   const previewUrlRef = useRef(null);
@@ -386,10 +466,10 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
         <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-center sm:justify-between dark:border-mint/15">
           <div>
             <h2 id="workspace-heading" className="sr-only">
-              Document upload workspace
+              {language === "hindi" ? "नोटिस अपलोड क्षेत्र" : language === "marathi" ? "सूचना अपलोड विभाग" : "Document upload workspace"}
             </h2>
             <p className="text-sm text-ink-muted dark:text-mint/65">
-              PDF circulars and notice photos · English, Hindi, or Marathi analysis
+              {copy.workspaceHint}
             </p>
           </div>
 
@@ -397,12 +477,12 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
             <div className="flex items-center gap-1.5 text-ink-muted dark:text-mint/65">
               <Globe className="size-3.5" aria-hidden="true" />
               <span className="text-[11px] font-semibold uppercase tracking-wider">
-                Analysis language
+                {copy.analysisLanguage}
               </span>
             </div>
             <div
               role="group"
-              aria-label="Analysis language"
+              aria-label={copy.analysisLanguage}
               className="inline-flex max-w-full flex-wrap rounded-md border border-border bg-canvas p-1 dark:border-mint/20 dark:bg-forest-deep"
             >
               {languages.map((lang) => {
@@ -434,7 +514,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
             ref={dropZoneRef}
             role="button"
             tabIndex={0}
-            aria-label="Upload notice file. Press Enter or Space to choose a file, or drag and drop here."
+            aria-label={copy.uploadAria}
             onDragOver={onDragOver}
             onDragLeave={onDragLeave}
             onDrop={onDrop}
@@ -450,12 +530,12 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
               <Upload className="size-5" aria-hidden="true" strokeWidth={1.75} />
             </div>
             <p className="mt-5 font-editorial text-2xl text-ink dark:text-canvas">
-              Drop your college notice here
+              {copy.uploadTitle}
             </p>
             <p className="mt-2 text-sm text-ink-muted dark:text-mint/60">
-              or{" "}
+              {copy.browsePrefix}{" "}
               <span className="font-medium text-forest underline decoration-mint/70 underline-offset-4 dark:text-mint">
-                browse files
+                {copy.browse}
               </span>
             </p>
             <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
@@ -464,20 +544,20 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                   {format}
                 </Badge>
               ))}
-              <span className="text-xs text-ink-muted dark:text-mint/60">· max 10 MB</span>
+              <span className="text-xs text-ink-muted dark:text-mint/60">· {copy.maxFileSize}</span>
             </div>
             <span
               aria-hidden="true"
               className="mt-6 inline-flex items-center gap-2 rounded-md bg-forest px-5 py-2.5 text-sm font-semibold text-canvas dark:bg-mint dark:text-forest"
             >
               <Upload className="size-4" />
-              Select notice file
+              {copy.selectFile}
             </span>
             <input
               ref={inputRef}
               id="notice-file-input"
               type="file"
-              aria-label="Choose a PDF, PNG, JPG, or JPEG notice"
+              aria-label={copy.chooseAria}
               tabIndex={-1}
               accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
               className="sr-only"
@@ -493,7 +573,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     <div className="relative size-20 shrink-0 overflow-hidden rounded-md border border-border bg-surface sm:size-24 dark:border-mint/20">
                       <img
                         src={previewUrl}
-                        alt="Notice thumbnail preview"
+                        alt={language === "hindi" ? "नोटिस की झलक" : language === "marathi" ? "सूचनेचे पूर्वावलोकन" : "Notice thumbnail preview"}
                         className="size-full object-cover"
                       />
                       <div className="absolute inset-x-0 bottom-0 bg-forest/90 py-0.5 text-center text-[10px] font-bold text-canvas">
@@ -520,7 +600,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone="mint">
                         <FileCheck2 className="size-3" aria-hidden="true" />
-                        Validated
+                        {copy.validated}
                       </Badge>
                       <span className="font-mono text-xs text-ink-muted dark:text-mint/65">
                         {formatFileSize(file.size)}
@@ -534,8 +614,8 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     </h3>
                     <p className="mt-1 text-sm text-ink-muted dark:text-mint/65">
                       {isPdfFile(file)
-                        ? "Ready for text extraction and OCR when needed."
-                        : "Image ready for OCR extraction."}
+                        ? copy.pdfReady
+                        : copy.imageReady}
                     </p>
                   </div>
                 </div>
@@ -543,13 +623,13 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                 <div className="flex items-center gap-2 self-end sm:self-start">
                   <Button variant="secondary" size="sm" onClick={triggerFilePicker}>
                     <RefreshCw className="size-3.5" aria-hidden="true" />
-                    Replace
+                    {copy.replace}
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={clearFile}
-                    aria-label="Remove selected notice file"
+                    aria-label={copy.removeAria}
                   >
                     <X className="size-4" aria-hidden="true" />
                   </Button>
@@ -560,7 +640,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                 ref={inputRef}
                 id="notice-file-replace-input"
                 type="file"
-                aria-label="Choose a PDF, PNG, JPG, or JPEG notice"
+                aria-label={copy.chooseAria}
                 tabIndex={-1}
                 accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg"
                 className="sr-only"
@@ -581,7 +661,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                         ) : (
                           <Sparkles className="size-4" aria-hidden="true" />
                         )}
-                        Analyze with AI
+                        {copy.analyze}
                       </Button>
 
                       {isPipelineRunning && (
@@ -591,10 +671,10 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           className="mt-3 text-sm text-ink dark:text-canvas"
                         >
                           {pipelineStage === "extracting"
-                            ? "Reading your notice..."
+                            ? copy.reading
                             : pipelineStage === "retrying"
-                              ? `AI is busy — retrying automatically... (attempt ${analysisRetryAttempt} of ${ANALYSIS_MAX_ATTEMPTS})`
-                              : "Analyzing with AI..."}
+                              ? copy.retrying(analysisRetryAttempt)
+                              : copy.analyzing}
                         </p>
                       )}
                     </div>
@@ -602,7 +682,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     {isPipelineRunning && (
                       <div className="w-full lg:max-w-sm">
                         <ProgressSteps
-                          steps={PROCESSING_STEPS}
+                          steps={processingSteps}
                           activeIndex={progressIndex >= 0 ? progressIndex : 0}
                         />
                       </div>
@@ -616,11 +696,11 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     >
                       <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                       <div className="flex-1">
-                        <span className="font-bold">Extraction Error: </span>
+                        <span className="font-bold">{copy.extractionError}: </span>
                         <span>{extractionError}</span>
                       </div>
                       <button type="button" onClick={() => setExtractionError(null)}>
-                        <span className="sr-only">Dismiss</span>
+                        <span className="sr-only">{copy.dismiss}</span>
                         <X className="size-3.5" aria-hidden="true" />
                       </button>
                     </div>
@@ -630,16 +710,15 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                     <div className="mt-4 rounded-lg border border-border bg-surface p-4 dark:border-mint/15 dark:bg-forest">
                       <div
                         role="status"
-                        aria-label={`Text extracted from ${extractionResult.filename}, ${extractionResult.pageCount} page${extractionResult.pageCount !== 1 ? "s" : ""}.`}
+                        aria-label={`${copy.extracted}: ${extractionResult.filename}, ${copy.page(extractionResult.pageCount)}.`}
                         className="mb-3 flex flex-wrap items-center gap-2 text-[11px] font-semibold text-ink-muted dark:text-mint/65"
                       >
                         <Badge tone="mint">
                           <FileCheck2 className="size-3" aria-hidden="true" />
-                          Extracted
+                          {copy.extracted}
                         </Badge>
                         <span>
-                          {extractionResult.pageCount} page
-                          {extractionResult.pageCount !== 1 ? "s" : ""}
+                          {copy.page(extractionResult.pageCount)}
                         </span>
                         <span>·</span>
                         <span className="min-w-0 break-all font-mono">
@@ -650,7 +729,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                             <span>·</span>
                             <span className="uppercase">
                               {extractionResult.extractionMethod === "mixed"
-                                ? `OCR pages ${extractionResult.ocrPages.join(", ")}`
+                                ? copy.ocrPages(extractionResult.ocrPages)
                                 : "OCR"}
                             </span>
                           </>
@@ -659,7 +738,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
 
                       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
                         <p className="text-sm text-ink dark:text-canvas">
-                          Original notice text is available for verification.
+                          {copy.originalAvailable}
                         </p>
                         <Button
                           variant="secondary"
@@ -669,8 +748,8 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           onClick={() => dispatchOriginalText({ type: "toggle" })}
                         >
                           {originalTextState.isExpanded
-                            ? "Hide original text"
-                            : "View original text"}
+                            ? copy.hideOriginal
+                            : copy.viewOriginal}
                         </Button>
                       </div>
 
@@ -691,11 +770,11 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                         >
                           <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
                           <div className="flex-1">
-                            <span className="font-bold">Analysis Error: </span>
+                            <span className="font-bold">{copy.analysisError}: </span>
                             <span>{analysisError}</span>
                           </div>
                           <button type="button" onClick={() => setAnalysisError(null)}>
-                            <span className="sr-only">Dismiss analysis error</span>
+                            <span className="sr-only">{copy.dismissAnalysis}</span>
                             <X className="size-3.5" aria-hidden="true" />
                           </button>
                         </div>
@@ -706,7 +785,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           {analysisResult.summary && (
                             <section className="rounded-lg border border-border bg-canvas p-5 dark:border-mint/20 dark:bg-forest-deep sm:p-6">
                               <h4 className="font-display text-lg font-semibold text-ink dark:text-canvas">
-                                Simple summary
+                                {copy.summary}
                               </h4>
                               <p className="mt-3 max-w-[70ch] whitespace-pre-wrap break-words text-base leading-relaxed text-ink [overflow-wrap:anywhere] dark:text-canvas sm:text-lg">
                                 {analysisResult.summary}
@@ -717,7 +796,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           {analysisResult.key_points?.length > 0 && (
                             <section className="rounded-lg border border-border bg-canvas p-5 dark:border-mint/15 dark:bg-forest-deep sm:p-6">
                               <h4 className="font-display text-lg font-semibold text-ink dark:text-canvas">
-                                Key announcements
+                                {copy.keyPoints}
                               </h4>
                               <ul className="mt-3 list-disc space-y-3 pl-5 text-base leading-relaxed text-ink dark:text-canvas sm:text-lg">
                                 {analysisResult.key_points.map((point, index) => (
@@ -735,7 +814,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           {analysisResult.important_dates?.length > 0 && (
                             <section className="rounded-lg border border-border bg-canvas p-5 dark:border-mint/15 dark:bg-forest-deep sm:p-6">
                               <h4 className="font-display text-lg font-semibold text-ink dark:text-canvas">
-                                Important dates
+                                {copy.importantDates}
                               </h4>
                               <ul className="mt-3 space-y-3 text-base leading-relaxed text-ink dark:text-canvas sm:text-lg">
                                 {analysisResult.important_dates.map((item, index) => (
@@ -748,12 +827,12 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                     </span>
                                     {item.type && (
                                       <span className="ml-2 text-xs font-semibold uppercase tracking-wide text-ink-muted dark:text-mint/65">
-                                        {dateTypeLabel(item.type)}
+                                        {dateTypeLabel(item.type, copy)}
                                       </span>
                                     )}
                                     {item.verified === false && (
                                       <span className="ml-2 text-xs font-semibold text-ink-muted">
-                                        Date unverified
+                                        {copy.dateUnverified}
                                       </span>
                                     )}
                                     {item.context && <span> — {item.context}</span>}
@@ -772,10 +851,10 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                 id="deadline-tracker-heading"
                                 className="font-display text-lg font-semibold text-ink dark:text-canvas"
                               >
-                                Deadline tracker
+                                {copy.deadlineTracker}
                               </h4>
                               <p className="mt-2 text-sm leading-relaxed text-ink dark:text-canvas">
-                                Action deadlines are separate from dates when events take place.
+                                {copy.deadlineIntro}
                               </p>
 
                               {deadlineStatusStale && (
@@ -783,15 +862,14 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                   role="status"
                                   className="mt-3 rounded-md border border-border px-3 py-2 text-sm dark:border-mint/20"
                                 >
-                                  Urgency was calculated for {urgencyCalculatedOn} in Asia/Kolkata.
-                                  Re-analyze to refresh it for today.
+                                  {copy.stale(urgencyCalculatedOn)}
                                 </p>
                               )}
 
                               {deadlineDates.length > 0 && (
                                 <div className="mt-3">
                                   <h5 className="text-sm font-bold uppercase tracking-wide text-ink dark:text-canvas">
-                                    Action deadlines
+                                    {copy.actionDeadlines}
                                   </h5>
                                   <ul className="mt-2 space-y-2">
                                     {deadlineDates.map((item, index) => {
@@ -817,15 +895,14 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                             <p className="mt-1 break-words text-base leading-relaxed [overflow-wrap:anywhere]">
                                               {verifiedDate
                                                 ? item.original_date ?? item.date
-                                                : "Full date not verified; check the original notice."}
+                                                : copy.fullDateUnverified}
                                             </p>
                                             {!deadlineStatusStale &&
                                               verifiedDate &&
                                               Number.isInteger(daysRemaining) &&
                                               daysRemaining > 0 && (
                                                 <p className="mt-1 text-sm">
-                                                  {daysRemaining} calendar day
-                                                  {daysRemaining === 1 ? "" : "s"} remaining
+                                                  {copy.daysRemaining(daysRemaining)}
                                                 </p>
                                               )}
                                             {!deadlineStatusStale &&
@@ -834,7 +911,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                               urgency === "overdue" &&
                                               item.normalized_datetime && (
                                                 <p className="mt-1 text-sm">
-                                                  Stated deadline time has passed
+                                                  {copy.deadlineTimePassed}
                                                 </p>
                                               )}
                                             {!deadlineStatusStale &&
@@ -842,9 +919,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                               Number.isInteger(daysRemaining) &&
                                               daysRemaining < 0 && (
                                                 <p className="mt-1 text-sm">
-                                                  {Math.abs(daysRemaining)} calendar day
-                                                  {Math.abs(daysRemaining) === 1 ? "" : "s"}{" "}
-                                                  overdue
+                                                  {copy.daysOverdue(Math.abs(daysRemaining))}
                                                 </p>
                                               )}
                                           </div>
@@ -852,8 +927,8 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                             className={`inline-flex w-fit shrink-0 items-center rounded-md border px-3 py-1.5 text-xs font-bold uppercase tracking-wide ${urgencyStyles[visibleStatus] ?? urgencyStyles.unknown}`}
                                           >
                                             {deadlineStatusStale
-                                              ? "Refresh to update"
-                                              : urgencyLabels[urgency] ?? urgencyLabels.unknown}
+                                              ? copy.refresh
+                                              : copy.urgency[urgency] ?? copy.urgency.unknown}
                                           </span>
                                         </li>
                                       );
@@ -867,7 +942,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                   className={`${deadlineDates.length > 0 ? "mt-4 border-t border-border pt-3 dark:border-mint/15" : "mt-3"}`}
                                 >
                                   <h5 className="text-sm font-bold uppercase tracking-wide">
-                                    Event dates · Not deadlines
+                                    {copy.eventDates}
                                   </h5>
                                   <ul className="mt-3 space-y-3 text-base leading-relaxed sm:text-lg">
                                     {eventDates.map((item, index) => (
@@ -879,7 +954,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                                         <span>
                                           {item.verified === true
                                             ? item.original_date ?? item.date
-                                            : "Date unverified"}
+                                            : copy.dateUnverified}
                                         </span>
                                       </li>
                                     ))}
@@ -892,7 +967,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           {analysisResult.action_items?.length > 0 && (
                             <section className="rounded-lg border border-border bg-canvas p-5 dark:border-mint/20 dark:bg-forest-deep sm:p-6">
                               <h4 className="font-display text-lg font-semibold text-ink dark:text-canvas">
-                                Action items
+                                {copy.actionItems}
                               </h4>
                               <ul className="mt-3 list-disc space-y-3 pl-5 text-base leading-relaxed text-ink dark:text-canvas sm:text-lg">
                                 {analysisResult.action_items.map((item, index) => (
@@ -908,8 +983,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
                           )}
 
                           <p className="text-[11px] text-ink-muted dark:text-mint/60">
-                            AI explanations can be inaccurate. Check dates, eligibility, and
-                            requirements against the original notice.
+                            {copy.disclaimer}
                           </p>
                         </div>
                       )}
@@ -928,7 +1002,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
           >
             <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
             <div className="flex-1">
-              <span className="font-bold">Notice Error: </span>
+              <span className="font-bold">{copy.noticeError}: </span>
               <span>{error}</span>
             </div>
             <button type="button" onClick={() => setError("")}>
@@ -941,7 +1015,7 @@ function NoticeUpload({ language, onLanguageChange, onAnalysisComplete }) {
         <div className="mt-5 flex flex-col items-start justify-between gap-2 border-t border-border pt-4 text-xs text-ink-muted sm:flex-row sm:items-center dark:border-mint/15 dark:text-mint/60">
           <span className="inline-flex items-center gap-1.5">
             <span className="size-1.5 rounded-full bg-mint" />
-            Extracted notice text can be analyzed in English, Hindi, or Marathi.
+            {copy.footer}
           </span>
           <span className="font-mono text-[11px]">
             Max 10 MB · PDF, PNG, JPG, JPEG
